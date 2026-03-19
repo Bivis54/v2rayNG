@@ -64,38 +64,45 @@ jobs:
         gomobile bind -v -androidapi 24 -trimpath -ldflags='-s -w -buildid=' ./
         cp libv2ray.aar ${{ github.workspace }}/V2rayNG/app/libs/
 
-    - name: "Build v2rayNG APK from source (Kotlin code)"
+    - name: Decode keystore
+      run: echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > ${{ github.workspace }}/my-release-key.jks
+
+    - name: "Build signed release APK from source (Kotlin code)"
       run: |
         cd ${{ github.workspace }}/V2rayNG
         echo "sdk.dir=${ANDROID_HOME}" > local.properties
         chmod 755 gradlew
         ./gradlew licenseFdroidReleaseReport
-        ./gradlew assembleFdroidDebug
+        ./gradlew assemblePlaystoreRelease \
+          -Pandroid.injected.signing.store.file=${{ github.workspace }}/my-release-key.jks \
+          -Pandroid.injected.signing.store.password=${{ secrets.SIGNING_STORE_PASSWORD }} \
+          -Pandroid.injected.signing.key.alias=${{ secrets.SIGNING_KEY_ALIAS }} \
+          -Pandroid.injected.signing.key.password=${{ secrets.SIGNING_KEY_PASSWORD }}
 
     - name: Upload APK (arm64-v8a)
       uses: actions/upload-artifact@v7
       if: success()
       with:
-        name: v2rayNG-arm64-v8a-from-source
-        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*arm64-v8a*.apk
+        name: v2rayNG-arm64-v8a-signed
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/playstore/release/*arm64-v8a*.apk
 
     - name: Upload APK (armeabi-v7a)
       uses: actions/upload-artifact@v7
       if: success()
       with:
-        name: v2rayNG-armeabi-v7a-from-source
-        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*armeabi-v7a*.apk
+        name: v2rayNG-armeabi-v7a-signed
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/playstore/release/*armeabi-v7a*.apk
 
     - name: Upload APK (x86_64)
       uses: actions/upload-artifact@v7
       if: success()
       with:
-        name: v2rayNG-x86_64-from-source
-        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*x86_64*.apk
+        name: v2rayNG-x86_64-signed
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/playstore/release/*x86_64*.apk
 
     - name: Upload APK (x86)
       uses: actions/upload-artifact@v7
       if: success()
       with:
-        name: v2rayNG-x86-from-source
-        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*x86*.apk
+        name: v2rayNG-x86-signed
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/playstore/release/*x86*.apk
